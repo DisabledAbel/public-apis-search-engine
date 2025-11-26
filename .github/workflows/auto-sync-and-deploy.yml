@@ -3,7 +3,7 @@ name: Auto Sync + Build Lunr Index + Deploy
 on:
   schedule:
     - cron: "*/10 * * * *"  # Every 10 minutes
-  workflow_dispatch:
+  workflow_dispatch:        # Manual trigger if needed
 
 jobs:
   sync-index-deploy:
@@ -23,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # 4️⃣ Build Lunr index (fetches upstream apis.json if missing or invalid)
+      # 4️⃣ Build Lunr index (fetches latest APIs from official API)
       - name: Build Lunr index
         run: node scripts/buildIndex.js
 
-      # 5️⃣ Commit updated apis.json, index.json, and data.json if any
+      # 5️⃣ Commit updated apis.json, index.json, and data.json if changed
       - name: Commit changes
         id: commit
         run: |
@@ -38,7 +38,7 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "No changes to commit."
           else
-            git commit -m "Auto-fetch upstream APIs + rebuild Lunr index"
+            git commit -m "Auto-fetch latest APIs + rebuild Lunr index"
             git push origin master
             echo "changed=true" >> $GITHUB_OUTPUT
 
