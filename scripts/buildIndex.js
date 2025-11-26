@@ -7,17 +7,27 @@ const apisFile = path.join(__dirname, '../apis.json');
 const dataFile = path.join(__dirname, '../public/data.json');
 const indexFile = path.join(__dirname, '../public/index.json');
 
-// Helper to fetch JSON from a URL
+// Helper to fetch JSON from a URL with proper headers
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
+    const options = {
+      headers: {
+        "User-Agent": "public-apis-search-bot",
+        "Accept": "application/json"
+      }
+    };
+
+    https.get(url, options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
+          if (data.trim().startsWith('<')) {
+            return reject(new Error("GitHub returned HTML instead of JSON (rate-limit or invalid path)."));
+          }
           resolve(JSON.parse(data));
         } catch (err) {
-          reject(new Error(`Failed to parse JSON from ${url}: ${err.message}`));
+          reject(new Error(`Failed to parse JSON from ${url}: ${err.message}\nRaw received:\n${data.substring(0, 200)}...`));
         }
       });
     }).on('error', reject);
