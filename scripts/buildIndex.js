@@ -24,7 +24,7 @@ function fetchJSON(url, retries = 3, delay = 5000) {
         res.on('end', () => {
           try {
             if (data.trim().startsWith('<')) {
-              throw new Error("Received HTML instead of JSON (rate-limit or invalid path)");
+              throw new Error("Received HTML instead of JSON");
             }
             resolve(JSON.parse(data));
           } catch (err) {
@@ -64,15 +64,14 @@ async function loadAPIs() {
         console.log('Loaded local apis.json as fallback.');
       } catch (err2) {
         console.warn('Local apis.json is invalid. Using empty fallback.');
-        raw = { entries: [] }; // Safe empty fallback
+        raw = { entries: [] };
       }
     } else {
       console.warn('No local apis.json found. Using empty fallback.');
-      raw = { entries: [] }; // Safe empty fallback
+      raw = { entries: [] };
     }
   }
 
-  // Ensure entries array exists
   if (!raw.entries || !Array.isArray(raw.entries)) {
     console.warn('Entries array missing. Using empty fallback.');
     raw.entries = [];
@@ -95,10 +94,8 @@ async function buildIndex() {
     url: d.Link || d.link || d.Url || d.url || ''
   }));
 
-  // Save data.json
   fs.writeFileSync(dataFile, JSON.stringify(docs, null, 2));
 
-  // Build Lunr index
   const idx = lunr(function () {
     this.ref('id');
     this.field('api_name');
@@ -111,7 +108,7 @@ async function buildIndex() {
   console.log('Lunr index.json and data.json generated successfully!');
 }
 
-// Run the build
+// Run build
 buildIndex().catch(err => {
   console.error('Error building Lunr index:', err);
   process.exit(1);
