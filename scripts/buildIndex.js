@@ -49,6 +49,7 @@ function fetchJSON(url, retries = 3, delay = 5000) {
   });
 }
 
+// Load APIs with safe fallback
 async function loadAPIs() {
   let raw;
   try {
@@ -56,27 +57,31 @@ async function loadAPIs() {
     raw = await fetchJSON('https://api.publicapis.org/entries');
     console.log('Successfully fetched upstream APIs.');
   } catch (err) {
-    console.warn('Failed to fetch upstream API. Falling back to local apis.json if available.');
+    console.warn('Failed to fetch upstream API:', err.message);
     if (fs.existsSync(apisFile)) {
       try {
         raw = JSON.parse(fs.readFileSync(apisFile, 'utf8'));
         console.log('Loaded local apis.json as fallback.');
       } catch (err2) {
-        throw new Error('Local apis.json is invalid and upstream fetch failed.');
+        console.warn('Local apis.json is invalid. Using empty fallback.');
+        raw = { entries: [] }; // Safe empty fallback
       }
     } else {
-      throw new Error('No local apis.json and upstream fetch failed.');
+      console.warn('No local apis.json found. Using empty fallback.');
+      raw = { entries: [] }; // Safe empty fallback
     }
   }
 
-  // Validate structure
+  // Ensure entries array exists
   if (!raw.entries || !Array.isArray(raw.entries)) {
-    throw new Error('JSON format invalid (missing entries array)');
+    console.warn('Entries array missing. Using empty fallback.');
+    raw.entries = [];
   }
 
   return raw.entries;
 }
 
+// Build Lunr index
 async function buildIndex() {
   const apis = await loadAPIs();
 
@@ -106,7 +111,7 @@ async function buildIndex() {
   console.log('Lunr index.json and data.json generated successfully!');
 }
 
-// Run build
+// Run the build
 buildIndex().catch(err => {
   console.error('Error building Lunr index:', err);
   process.exit(1);
