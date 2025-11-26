@@ -3,46 +3,54 @@ name: Auto Sync + Build Lunr Index + Deploy
 on:
   schedule:
     - cron: "*/10 * * * *"  # Every 10 minutes
-  workflow_dispatch:
+  workflow_dispatch:        # Manual trigger if needed
 
 jobs:
   sync-index-deploy:
     runs-on: ubuntu-latest
     steps:
+      # 1️⃣ Checkout repo
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2️⃣ Sync upstream fork
       - name: Sync upstream
         run: |
           git remote add upstream https://github.com/public-apis/public-apis.git || true
           git fetch upstream
-          git checkout main
-          git merge upstream/main --no-edit || true
+          git checkout master
+          git merge upstream/master --no-edit || true
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      # 3️⃣ Setup Node
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
+      # 4️⃣ Install dependencies
+      - run: npm ci
 
-      - name: Build Lunr index
-        run: node scripts/buildIndex.js
+      # 5️⃣ Build Lunr index
+      - run: node scripts/buildIndex.js
 
+      # 6️⃣ Commit index/data changes if any
       - name: Commit changes
+        id: commit
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add public/index.json public/data.json
-          if ! git diff --cached --quiet; then
-            git commit -m "Auto-sync upstream + rebuild Lunr index"
-            git push origin main
+          if git diff --cached --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to commit."
           else
-            echo "No changes to commit"
+            git commit -m "Auto-sync upstream + rebuild Lunr index"
+            git push origin master
+            echo "changed=true" >> $GITHUB_OUTPUT
 
+      # 7️⃣ Deploy to Vercel only if there were changes
       - name: Deploy to Vercel
+        if: steps.commit.outputs.changed == 'true'
         uses: amondnet/vercel-action@v20
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
