@@ -7,7 +7,7 @@ const apisFile = path.join(__dirname, '../apis.json');
 const dataFile = path.join(__dirname, '../public/data.json');
 const indexFile = path.join(__dirname, '../public/index.json');
 
-// Helper to fetch JSON from URL
+// Helper to fetch JSON from a URL
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
@@ -17,7 +17,7 @@ function fetchJSON(url) {
         try {
           resolve(JSON.parse(data));
         } catch (err) {
-          reject(err);
+          reject(new Error(`Failed to parse JSON from ${url}: ${err.message}`));
         }
       });
     }).on('error', reject);
@@ -38,13 +38,22 @@ async function loadAPIs() {
     console.log('apis.json not found. Fetching from upstream...');
     raw = await fetchJSON('https://raw.githubusercontent.com/public-apis/public-apis/master/entries.json');
   }
-  return raw.entries || raw; // support both local and upstream formats
+
+  // Validate that raw contains an array
+  if (Array.isArray(raw.entries)) {
+    return raw.entries;
+  } else if (Array.isArray(raw)) {
+    return raw;
+  } else {
+    throw new Error('Upstream JSON is not in the expected format (expected array or {entries: []})');
+  }
 }
 
 async function buildIndex() {
-  const raw = await loadAPIs();
+  const apis = await loadAPIs();
 
-  const docs = raw.map((d, i) => ({
+  // Transform data for Lunr
+  const docs = apis.map((d, i) => ({
     id: i.toString(),
     api_name: d.API || d.name || '',
     description: d.Description || d.description || '',
@@ -54,8 +63,10 @@ async function buildIndex() {
     url: d.Link || d.link || d.Url || d.url || ''
   }));
 
+  // Save data.json
   fs.writeFileSync(dataFile, JSON.stringify(docs, null, 2));
 
+  // Build Lunr index
   const idx = lunr(function () {
     this.ref('id');
     this.field('api_name');
@@ -68,6 +79,7 @@ async function buildIndex() {
   console.log('Lunr index.json and data.json generated successfully!');
 }
 
+// Run the build
 buildIndex().catch(err => {
   console.error('Error building Lunr index:', err);
   process.exit(1);
