@@ -9,35 +9,29 @@ jobs:
   sync-index-deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout repo
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2️⃣ Sync upstream fork
-      - name: Add upstream remote
+      - name: Sync upstream
         run: |
           git remote add upstream https://github.com/public-apis/public-apis.git || true
           git fetch upstream
-
-      - name: Merge upstream
-        run: |
           git checkout main
           git merge upstream/main --no-edit || true
 
-      # 3️⃣ Setup Node
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 4️⃣ Install dependencies
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      # 5️⃣ Build Lunr index
-      - run: node scripts/buildIndex.js
+      - name: Build Lunr index
+        run: node scripts/buildIndex.js
 
-      # 6️⃣ Commit & push updated index
-      - name: Commit index changes
+      - name: Commit changes
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
@@ -48,7 +42,6 @@ jobs:
           else
             echo "No changes to commit"
 
-      # 7️⃣ Deploy to Vercel (personal account)
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v20
         with:
