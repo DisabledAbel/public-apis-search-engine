@@ -2,61 +2,35 @@ name: Auto Sync + Build + Deploy
 
 on:
   schedule:
-    - cron: "*/10 * * * *" 
-  workflow_dispatch:
+    - cron: "*/10 * * * *" # every 10 minutes
+  workflow_dispatch:       # allows manual trigger
 
 jobs:
   sync-build-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-        with: fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with: node-version: 20
-      - name: Install dependencies
-        run: npm install
-      - name: Build Lunr index
-        run: node scripts/buildIndex.js
-      - name: Commit changes
-        id: commit
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add apis.json public/data.json public/index.json
-          if git diff --cached --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "No changes to commit."
-          else
-            git commit -m "Auto-update APIs and Lunr index"
-            git push origin master
-            echo "changed=true" >> $GITHUB_OUTPUT
-      - name: Deploy to Vercel
-        if: steps.commit.outputs.changed == 'true'
-        uses: amondnet/vercel-action@v20
+      # 1️⃣ Checkout repository
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-args: "--prod"
-          working-directory: .
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-name: Auto Sync + Build + Deploy
+          fetch-depth: 0
 
-on:
-  schedule:
-    - cron: "*/10 * * * *" 
-  workflow_dispatch:
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-jobs:
-  sync-build-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with: fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with: node-version: 20
+      # 3️⃣ Install dependencies
       - name: Install dependencies
         run: npm install
+
+      # 4️⃣ Build Lunr index
       - name: Build Lunr index
         run: node scripts/buildIndex.js
+
+      # 5️⃣ Commit updated files if any
       - name: Commit changes
         id: commit
         run: |
@@ -70,6 +44,8 @@ jobs:
             git commit -m "Auto-update APIs and Lunr index"
             git push origin master
             echo "changed=true" >> $GITHUB_OUTPUT
+
+      # 6️⃣ Deploy to Vercel only if there were changes
       - name: Deploy to Vercel
         if: steps.commit.outputs.changed == 'true'
         uses: amondnet/vercel-action@v20
