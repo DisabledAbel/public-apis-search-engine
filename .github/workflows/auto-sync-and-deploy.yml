@@ -44,6 +44,7 @@ jobs:
             git commit -m "Auto-update APIs and Lunr index"
             git push origin master
             echo "changed=true" >> $GITHUB_OUTPUT
+          fi
 
       # 6️⃣ Deploy to Vercel only if there were changes
       - name: Deploy to Vercel
