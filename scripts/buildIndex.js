@@ -23,7 +23,7 @@ function fetchJSON(url) {
       res.on('end', () => {
         try {
           if (data.trim().startsWith('<')) {
-            return reject(new Error("GitHub returned HTML instead of JSON (rate-limit or invalid path)."));
+            return reject(new Error("Received HTML instead of JSON (rate-limit or invalid path)"));
           }
           resolve(JSON.parse(data));
         } catch (err) {
@@ -41,22 +41,20 @@ async function loadAPIs() {
       raw = JSON.parse(fs.readFileSync(apisFile, 'utf8'));
       console.log('Loaded local apis.json');
     } catch (err) {
-      console.warn('Local apis.json is invalid. Fetching from upstream...');
-      raw = await fetchJSON('https://raw.githubusercontent.com/public-apis/public-apis/master/entries.json');
+      console.warn('Local apis.json is invalid. Fetching from upstream API...');
+      raw = await fetchJSON('https://api.publicapis.org/entries');
     }
   } else {
-    console.log('apis.json not found. Fetching from upstream...');
-    raw = await fetchJSON('https://raw.githubusercontent.com/public-apis/public-apis/master/entries.json');
+    console.log('apis.json not found. Fetching from upstream API...');
+    raw = await fetchJSON('https://api.publicapis.org/entries');
   }
 
-  // Validate that raw contains an array
-  if (Array.isArray(raw.entries)) {
-    return raw.entries;
-  } else if (Array.isArray(raw)) {
-    return raw;
-  } else {
-    throw new Error('Upstream JSON is not in the expected format (expected array or {entries: []})');
+  // Validate that raw.entries exists and is an array
+  if (!raw.entries || !Array.isArray(raw.entries)) {
+    throw new Error('Upstream JSON is not in expected format (missing entries array)');
   }
+
+  return raw.entries;
 }
 
 async function buildIndex() {
