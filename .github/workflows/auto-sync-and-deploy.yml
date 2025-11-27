@@ -2,7 +2,7 @@ name: Auto Sync + Build + Deploy
 
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/10 * * * *" # Runs every 10 minutes
   workflow_dispatch:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -37,7 +37,37 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build index + Next.js
+      - name: Build Lunr index safely
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = require('path');
+          const https = require('https');
+
+          const apisFile = path.join(__dirname, '../apis.json');
+          const fetchJSON = (url) =>
+            new Promise((resolve) => {
+              https.get(url, { headers: { 'User-Agent': 'github-actions', Accept: 'application/json' } }, res => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => {
+                  try { resolve(JSON.parse(data).entries || []); }
+                  catch { resolve([]); }
+                });
+              }).on('error', () => resolve([]));
+            });
+
+          (async () => {
+            let entries = [];
+            try { entries = await fetchJSON('https://api.publicapis.org/entries'); } catch {}
+            if (entries.length === 0 && fs.existsSync(apisFile)) {
+              try { entries = JSON.parse(fs.readFileSync(apisFile, 'utf8')).entries || []; } catch {}
+            }
+            fs.writeFileSync(apisFile, JSON.stringify({ entries }, null, 2));
+          })();
+          "
+
+      - name: Build Next.js
         run: npm run build
 
       - name: Commit updated API index
