@@ -8,6 +8,7 @@ on:
 jobs:
   sync-build-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,13 +20,27 @@ jobs:
         with:
           node-version: 20
 
+      - name: Ensure package-lock.json exists
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "package-lock.json not found, generating..."
+            npm install
+            git config --global user.name "github-actions"
+            git config --global user.email "github-actions@github.com"
+            git add package-lock.json
+            git commit -m "Generate package-lock.json automatically"
+            git push origin HEAD
+          else
+            echo "package-lock.json exists, skipping..."
+          fi
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build index + Next.js
         run: npm run build
 
-      - name: Commit changes
+      - name: Commit updated API index
         id: commit
         run: |
           git config --global user.name "github-actions"
@@ -35,7 +50,7 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             git commit -m "Auto-update APIs and Lunr index"
-            git push origin master
+            git push origin HEAD
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
