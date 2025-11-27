@@ -1,7 +1,6 @@
-body { font-family: sans-serif; margin: 2rem; background: #fff; color: #111; }
-.container { max-width: 700px; margin: auto; }
-input { width: 100%; padding: 0.5rem; font-size: 1rem; margin-bottom: 1rem; }
-ul { list-style: none; padding: 0; }
-li { padding: 0.5rem 0; border-bottom: 1px solid #ddd; }
-a { text-decoration: none; color: #0077cc; }
-a:hover { text-decoration: underline; }
+/* styles/globals.css */
+html, body, #__next { height: 100%; }
+body { margin: 0; font-family: Inter, Arial, sans-serif; background: #fff; color: #111; }
+@media (prefers-color-scheme: dark) {
+  body { background: #202124; color: #e8eaed; }
+}
